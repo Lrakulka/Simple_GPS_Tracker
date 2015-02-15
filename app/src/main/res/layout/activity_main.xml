@@ -12,14 +12,15 @@
         android:layout_alignParentEnd="true" />
 
     <Button
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:text="@string/button_start"
         android:id="@+id/bt_start_stop"
         android:layout_alignTop="@+id/tracker_map"
         android:layout_alignLeft="@+id/tracker_map"
         android:layout_alignStart="@+id/tracker_map"
-        android:onClick="onStopOrStart" />
+        android:onClick="onStopOrStart"
+        android:layout_alignBottom="@+id/bt_reset" />
 
     <Button
         android:layout_width="wrap_content"

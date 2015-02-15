@@ -1,14 +1,17 @@
 package com.task.krabiysok.simple_gps_tracker;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.location.Location;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.Toast;
 
 /**
  * Created by KrabiySok on 2/15/2015.
@@ -20,6 +23,9 @@ public class MapPainter implements  SurfaceHolder.Callback {
     private static final float TRIANGLE_WIDTH_PER = 0.03f;
     private static final float TEXT_SIZE_PER = 0.05f;
     private static final float TEXT_INDENT_PER = TEXT_SIZE_PER / 2 + 0.04f;
+    private static final double METERS_IN_DEGREE_Lon = 111120;
+    private static final double METERS_IN_DEGREE_Lat = 99000;
+    private static final int MAP_RESOLUTION = 100; // resolution of map 100m
 
     private PointF mMapCenter;
     private Paint mPaint;
@@ -29,6 +35,10 @@ public class MapPainter implements  SurfaceHolder.Callback {
     private Path mVertTriangle, mHorisTriangle;
     private PointF mPreviousPosition;
     private Context mContext;
+    private Location mBeginLocation;
+    private double metersInPixel;
+    private Canvas mCanvas;  // Need for canvas copying
+    private Bitmap mBitMap;  // Need for canvas copying
 
     MapPainter(SurfaceView surfaceView, Context context) {
         mSurfaceView = surfaceView;
@@ -37,11 +47,12 @@ public class MapPainter implements  SurfaceHolder.Callback {
     }
 
     private void getParams() {
-        float triangHeight, triangHalfWidth,lowerSide;
+        float triangHeight, triangHalfWidth, lowerSide;
         mMapCenter = mPreviousPosition = new PointF(mSurfaceView.getWidth() / 2,
                 mSurfaceView.getHeight() / 2);
-        lowerSide = mMapCenter.x > mMapCenter.y ?  mMapCenter.x : mMapCenter.y;
+        lowerSide = mMapCenter.x > mMapCenter.y ? mMapCenter.x : mMapCenter.y;
         mTextIndent = lowerSide * TEXT_INDENT_PER;
+        metersInPixel = lowerSide / MAP_RESOLUTION;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
         mPaint.setColor(Color.BLACK);
         mPaint.setStyle(Paint.Style.FILL);
@@ -56,24 +67,53 @@ public class MapPainter implements  SurfaceHolder.Callback {
         mVertTriangle = drawTriangle(new PointF(mMapCenter.x - triangHalfWidth,
                 triangHeight), new PointF(mMapCenter.x + triangHalfWidth,
                 triangHeight), new PointF(mMapCenter.x, 0));
+        mBitMap = Bitmap.createBitmap(mSurfaceView.getWidth(),
+                mSurfaceView.getHeight(), Bitmap.Config.RGB_565);
+        mCanvas = new Canvas(mBitMap);
         cleanAll();
     }
 
     void drawNewPoint(Location location) {
         Canvas canvas;
         PointF currentPosition;
+        // Remember first location(Start point)
+        if (mBeginLocation == null) {
+            mBeginLocation = location;
+            return;
+        }
         if (mPaint.getStrokeWidth() != mLineWidth) mPaint.setStrokeWidth(mLineWidth);
-        canvas = mSurfaceHolder.lockCanvas();
-        if (canvas != null) {
-            currentPosition = new PointF(0,0);
-            //---------
-            canvas.drawLine(mPreviousPosition.x, mPreviousPosition.y,
+
+        Log.d("Log", "Location " + location.getLatitude() + " " + location.getLongitude());
+        Toast.makeText(mContext, "Location " + location.getLatitude() + " " + location.getLongitude(), Toast.LENGTH_LONG).show();
+
+        currentPosition = new PointF((float) (mMapCenter.x + ((location.getLatitude() -
+                mBeginLocation.getLatitude()) * METERS_IN_DEGREE_Lat) * metersInPixel),
+                (float) (mMapCenter.y + ((location.getLongitude() -
+                        mBeginLocation.getLongitude()) * METERS_IN_DEGREE_Lon) * metersInPixel));
+
+
+        Log.d("Log", "Posit " + currentPosition.x + " " + currentPosition.y);
+
+        if (!mPreviousPosition.equals(currentPosition)) {
+
+            String k = "Posit " + String.valueOf(currentPosition.x) + " " + String.valueOf(currentPosition.y);
+            Toast.makeText(mContext, k, Toast.LENGTH_LONG).show();
+
+            mCanvas.drawLine(mPreviousPosition.x, mPreviousPosition.y,
                     currentPosition.x, currentPosition.y, mPaint);
             mPreviousPosition = currentPosition;
+            canvas = mSurfaceHolder.lockCanvas();
+            if (canvas != null) {
+                synchronized (mSurfaceHolder) {
+                    canvas.drawBitmap(mBitMap, 0, 0, null);
+                    mSurfaceHolder.unlockCanvasAndPost(canvas);
+                }
+            }
         }
     }
 
     private void drawGrid(Canvas canvas) {
+        Log.d("Log", "draw grid");
         float horXPosition = mSurfaceView.getWidth() - mPaint.getTextSize() * mContext.getResources().
                 getString(R.string.grid_east).length() / 2 - mPaint.getTextSize();
         if (mPaint.getStrokeWidth() != mGridWidth) mPaint.setStrokeWidth(mGridWidth);
@@ -105,11 +145,15 @@ public class MapPainter implements  SurfaceHolder.Callback {
 
     void cleanAll() {
         Canvas canvas = mSurfaceHolder.lockCanvas();
+        mCanvas.drawColor(Color.WHITE);
+        drawGrid(mCanvas);
+        mPreviousPosition = mMapCenter;
+        mBeginLocation = null;
         if (canvas != null) {
-            canvas.drawColor(Color.WHITE);//, PorterDuff.Mode.CLEAR);
-            drawGrid(canvas);
-            mPreviousPosition = mMapCenter;
-            mSurfaceHolder.unlockCanvasAndPost(canvas);
+            synchronized (mSurfaceHolder){
+                canvas.drawBitmap(mBitMap, 0, 0, null);
+                mSurfaceHolder.unlockCanvasAndPost(canvas);
+            }
         }
     }
 
