@@ -2,7 +2,13 @@
 <resources>
 
     <string name="app_name">Simple_GPS_Tracker</string>
-    <string name="hello_world">Hello world!</string>
+    <string name="button_start">СТАРТ</string>
+    <string name="button_stop">СТОП</string>
+    <string name="button_reset">СБРОС</string>
     <string name="action_settings">Settings</string>
+    <string name="grid_start">Старт</string>
+    <string name="grid_resolution">100 м</string>
+    <string name="grid_east">Восток</string>
+    <string name="grid_north">Север</string>
 
 </resources>
