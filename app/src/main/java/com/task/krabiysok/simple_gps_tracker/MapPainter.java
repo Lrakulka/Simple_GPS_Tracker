@@ -11,7 +11,6 @@ import android.location.Location;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.widget.Toast;
 
 /**
  * Created by KrabiySok on 2/15/2015.
@@ -23,8 +22,7 @@ public class MapPainter implements  SurfaceHolder.Callback {
     private static final float TRIANGLE_WIDTH_PER = 0.03f;
     private static final float TEXT_SIZE_PER = 0.05f;
     private static final float TEXT_INDENT_PER = TEXT_SIZE_PER / 2 + 0.04f;
-    private static final double METERS_IN_DEGREE_Lon = 111120;
-    private static final double METERS_IN_DEGREE_Lat = 99000;
+    private static final double AVERAGE_EARTH_R = 6372.795;
     private static final int MAP_RESOLUTION = 100; // resolution of map 100m
 
     private PointF mMapCenter;
@@ -35,8 +33,8 @@ public class MapPainter implements  SurfaceHolder.Callback {
     private Path mVertTriangle, mHorisTriangle;
     private PointF mPreviousPosition;
     private Context mContext;
-    private Location mBeginLocation;
-    private double metersInPixel;
+    private Location mBeginLocation, mPrivLocation;
+    private double dimensionCoff;
     private Canvas mCanvas;  // Need for canvas copying
     private Bitmap mBitMap;  // Need for canvas copying
 
@@ -52,7 +50,7 @@ public class MapPainter implements  SurfaceHolder.Callback {
                 mSurfaceView.getHeight() / 2);
         lowerSide = mMapCenter.x > mMapCenter.y ? mMapCenter.x : mMapCenter.y;
         mTextIndent = lowerSide * TEXT_INDENT_PER;
-        metersInPixel = lowerSide / MAP_RESOLUTION;
+        dimensionCoff = 1000 * ((lowerSide / 2) / MAP_RESOLUTION);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
         mPaint.setColor(Color.BLACK);
         mPaint.setStyle(Paint.Style.FILL);
@@ -78,38 +76,54 @@ public class MapPainter implements  SurfaceHolder.Callback {
         PointF currentPosition;
         // Remember first location(Start point)
         if (mBeginLocation == null) {
-            mBeginLocation = location;
+            mPrivLocation = mBeginLocation = location;
             return;
         }
+        if (mPrivLocation.getLatitude() == location.getLatitude() &&
+                mPrivLocation.getLongitude() == location.getLongitude()) {
+            return;
+        } else mPrivLocation = location;
         if (mPaint.getStrokeWidth() != mLineWidth) mPaint.setStrokeWidth(mLineWidth);
 
         Log.d("Log", "Location " + location.getLatitude() + " " + location.getLongitude());
-        Toast.makeText(mContext, "Location " + location.getLatitude() + " " + location.getLongitude(), Toast.LENGTH_LONG).show();
 
-        currentPosition = new PointF((float) (mMapCenter.x + ((location.getLatitude() -
-                mBeginLocation.getLatitude()) * METERS_IN_DEGREE_Lat) * metersInPixel),
-                (float) (mMapCenter.y + ((location.getLongitude() -
-                        mBeginLocation.getLongitude()) * METERS_IN_DEGREE_Lon) * metersInPixel));
-
+        currentPosition = new PointF(getPointX(location.getLongitude()),
+                getPointY(location.getLatitude()));
 
         Log.d("Log", "Posit " + currentPosition.x + " " + currentPosition.y);
 
-        if (!mPreviousPosition.equals(currentPosition)) {
-
-            String k = "Posit " + String.valueOf(currentPosition.x) + " " + String.valueOf(currentPosition.y);
-            Toast.makeText(mContext, k, Toast.LENGTH_LONG).show();
-
-            mCanvas.drawLine(mPreviousPosition.x, mPreviousPosition.y,
-                    currentPosition.x, currentPosition.y, mPaint);
-            mPreviousPosition = currentPosition;
-            canvas = mSurfaceHolder.lockCanvas();
-            if (canvas != null) {
-                synchronized (mSurfaceHolder) {
-                    canvas.drawBitmap(mBitMap, 0, 0, null);
-                    mSurfaceHolder.unlockCanvasAndPost(canvas);
-                }
+        mCanvas.drawLine(mPreviousPosition.x, mPreviousPosition.y,
+                currentPosition.x, currentPosition.y, mPaint);
+        mPreviousPosition = currentPosition;
+        canvas = mSurfaceHolder.lockCanvas();
+        if (canvas != null) {
+            synchronized (mSurfaceHolder) {
+                canvas.drawBitmap(mBitMap, 0, 0, null);
+                mSurfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
+    }
+
+    private float getPointY(double newLatitude) {
+        float lat;
+        double latitudeInRad = Math.toRadians(mBeginLocation.getLatitude());
+        double newLatitudeInRad = Math.toRadians(newLatitude);
+        lat = (float) ((AVERAGE_EARTH_R * Math.acos(Math.sin(latitudeInRad) *
+                Math.sin(newLatitudeInRad) + Math.cos(latitudeInRad) *
+                Math.cos(newLatitudeInRad))) * dimensionCoff);
+        if (newLatitude < mBeginLocation.getLatitude()) return mMapCenter.y + lat;
+        else return mMapCenter.y - lat;
+    }
+
+    private float getPointX(double newLongitude) {
+        float lon;
+        double latitudeinRad = Math.toRadians(mBeginLocation.getLatitude());
+        double div = Math.toRadians(newLongitude - mBeginLocation.getLongitude());
+        lon = (float) ((AVERAGE_EARTH_R * Math.acos(Math.sin(latitudeinRad) *
+                Math.sin(latitudeinRad) + Math.cos(latitudeinRad) *
+                Math.cos(latitudeinRad) * (Math.cos(div)))) * dimensionCoff);
+        if (newLongitude > mBeginLocation.getLongitude()) return mMapCenter.x + lon;
+        else return mMapCenter.x - lon;
     }
 
     private void drawGrid(Canvas canvas) {
