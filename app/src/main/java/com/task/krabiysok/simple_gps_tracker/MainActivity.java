@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
     public void onStopOrStart(View v) {
         if (!mTrackerStatus) {
             mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                    0, 0, mMyLocationListener);//1000, 5, mMyLocationListener);
+                    1000, 5, mMyLocationListener);
             ((Button) findViewById(R.id.bt_start_stop)).
                     setText(getResources().getString(R.string.button_stop));
             mTrackerStatus = true;

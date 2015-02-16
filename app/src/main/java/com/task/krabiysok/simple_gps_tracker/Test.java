@@ -4,6 +4,7 @@ import android.location.Location;
 
 /**
  * Created by KrabiySok on 2/16/2015.
+ * Only for test. Not Save.
  */
 public class Test extends Thread {
     private static final double[] longitude = {30.4502757, 30.4516373, 30.4516373, 30.4517103, 30.4502757};
@@ -17,7 +18,7 @@ public class Test extends Thread {
     public void run() {
         for (int p = 0; p < 5; ++p) {
             for (int i = 0; i < longitude.length; ++i) {
-                Location location = new Location("12");
+                Location location = new Location("");
                 location.setLongitude(longitude[i]);
                 location.setLatitude(latitude[i]);
                 try {

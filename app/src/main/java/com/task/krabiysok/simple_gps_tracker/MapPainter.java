@@ -16,19 +16,21 @@ import android.view.SurfaceView;
  * Created by KrabiySok on 2/15/2015.
  */
 public class MapPainter implements  SurfaceHolder.Callback {
+    // Dependencies from small side of screen
     private static final float GRID_WIDTH_PER = 0.01f;
     private static final float LINE_WIDTH_PER = 0.005f;
     private static final float TRIANGLE_HEIGHT_PER = 0.04f;
     private static final float TRIANGLE_WIDTH_PER = 0.03f;
     private static final float TEXT_SIZE_PER = 0.05f;
     private static final float TEXT_INDENT_PER = TEXT_SIZE_PER / 2 + 0.04f;
+
     private static final double AVERAGE_EARTH_R = 6372.795;
     private static final int MAP_RESOLUTION = 100; // resolution of map 100m
 
     private PointF mMapCenter;
     private Paint mPaint;
-    private float mGridWidth, mLineWidth, mTextIndent;
-    private SurfaceHolder mSurfaceHolder;
+    private float mGridWidth, mLineWidth, mTextIndent;  //Grid line width, tracker line width
+    private final SurfaceHolder mSurfaceHolder;
     private SurfaceView mSurfaceView;
     private Path mVertTriangle, mHorisTriangle;
     private PointF mPreviousPosition;
@@ -44,19 +46,21 @@ public class MapPainter implements  SurfaceHolder.Callback {
         mContext = context;
     }
 
+    // Set start parameters
     private void getParams() {
         float triangHeight, triangHalfWidth, lowerSide;
         mMapCenter = mPreviousPosition = new PointF(mSurfaceView.getWidth() / 2,
                 mSurfaceView.getHeight() / 2);
         lowerSide = mMapCenter.x > mMapCenter.y ? mMapCenter.x : mMapCenter.y;
         mTextIndent = lowerSide * TEXT_INDENT_PER;
-        dimensionCoff = 1000 * ((lowerSide / 2) / MAP_RESOLUTION);
+        dimensionCoff = 1000 * ((lowerSide / 2) / MAP_RESOLUTION); // Need for drawing tracker line
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
         mPaint.setColor(Color.BLACK);
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setTextSize(lowerSide * TEXT_SIZE_PER);
         mGridWidth = lowerSide * GRID_WIDTH_PER;
         mLineWidth = lowerSide * LINE_WIDTH_PER;
+        // Parameters of drawing arrow
         triangHeight = lowerSide * TRIANGLE_HEIGHT_PER;
         triangHalfWidth = lowerSide * TRIANGLE_WIDTH_PER;
         mHorisTriangle = drawTriangle(new PointF(mSurfaceView.getWidth() - triangHeight,
@@ -65,6 +69,7 @@ public class MapPainter implements  SurfaceHolder.Callback {
         mVertTriangle = drawTriangle(new PointF(mMapCenter.x - triangHalfWidth,
                 triangHeight), new PointF(mMapCenter.x + triangHalfWidth,
                 triangHeight), new PointF(mMapCenter.x, 0));
+        // I use bitmap for saving grid with tracker line
         mBitMap = Bitmap.createBitmap(mSurfaceView.getWidth(),
                 mSurfaceView.getHeight(), Bitmap.Config.RGB_565);
         mCanvas = new Canvas(mBitMap);
@@ -84,13 +89,11 @@ public class MapPainter implements  SurfaceHolder.Callback {
             return;
         } else mPrivLocation = location;
         if (mPaint.getStrokeWidth() != mLineWidth) mPaint.setStrokeWidth(mLineWidth);
-
-        Log.d("Log", "Location " + location.getLatitude() + " " + location.getLongitude());
-
         currentPosition = new PointF(getPointX(location.getLongitude()),
                 getPointY(location.getLatitude()));
 
         Log.d("Log", "Posit " + currentPosition.x + " " + currentPosition.y);
+        Log.d("Log", "Location " + location.getLatitude() + " " + location.getLongitude());
 
         mCanvas.drawLine(mPreviousPosition.x, mPreviousPosition.y,
                 currentPosition.x, currentPosition.y, mPaint);
